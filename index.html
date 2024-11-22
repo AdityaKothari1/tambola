@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Tambola Ticket Generator</title>
+    <style>
+      #tickets {
+        max-width: 540px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px 30px;
+      }
+
+      #tickets > table:nth-child(14n-1),
+      #tickets > table:nth-child(14n) {
+        margin-bottom: 36.9px;
+      }
+
+      table {
+        border-collapse: collapse;
+        width: 250px;
+        page-break-inside: avoid;
+        page-break-after: auto;
+        border: solid #000 !important;
+        border-width: 1px 0 0 1px !important;
+      }
+      td {
+        border: 1px solid black;
+        width: 25px;
+        height: 25px;
+        text-align: center;
+        font-size: 12px;
+        border: solid #000 !important;
+        border-width: 0 1px 1px 0 !important;
+      }
+
+      #controls {
+        margin-top: 40px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="controls">
+      <h1>Tambola Ticket Generator</h1>
+      <input type="number" value="12" id="ticket-count" />
+      <button onclick="generateTickets()">Generate Tickets</button>
+      <div id="notice"></div>
+      <div>
+        Currently generating page <span id="currentPage"> 0 </span> of
+        <span id="totalPage"> 0 </span> pages
+      </div>
+    </div>
+    <div id="tickets"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+     
+
+    <script>
+
+      const PAGE_CHUNK_SIZE = 10
+      const MAX_PDF_SIZE = 20000
+
+      async function generateTickets() {
+          let numTickets = parseInt(document.getElementById("ticket-count").value);
+          for (let i=1; numTickets > 0; numTickets = numTickets - MAX_PDF_SIZE, i++) {
+              await generatePdf(((numTickets < MAX_PDF_SIZE)?numTickets:MAX_PDF_SIZE), i);
+          }
+      }
+
+      async function generatePdf(numTickets, part) {
+          const ticketsDiv = document.getElementById(tickets);
+
+          document.getElementById("totalPage").innerText = Math.ceil(numTickets/14)
+
+          const doc = new jspdf.jsPDF('portrait', 'pt', 'a4');
+          const pageHeight= doc.internal.pageSize.height;
+
+          for (let i = 1; i <= numTickets; i++) {
+              const ticket = generateTicket();
+              ticketsDiv.appendChild(ticket);
+
+              if (i === 1) {
+                  document.getElementById("currentPage").innerText = Math.floor((i-1)/14) + "-" + (Math.floor((i-1)/14) + PAGE_CHUNK_SIZE - 1);
+              }
+
+              if (i%(14 * PAGE_CHUNK_SIZE) === 0 || i === numTickets) {
+                  document.getElementById("currentPage").innerText = Math.floor((i-1)/14) + "-" + (Math.floor((i-1)/14) + PAGE_CHUNK_SIZE - 1);
+
+                  await new Promise((resolve) => {
+                      doc.html(ticketsDiv, { callback: resolve, x:30, y:((pageHeight * PAGE_CHUNK_SIZE * (Math.floor((i-1)/(14 * PAGE_CHUNK_SIZE)))) + 35), autoPaging: 'text' });
+                  });
+                  ticketsDiv.innerHTML = '';
+              }
+          }
+
+          doc.save(Tambola_ticket_part_${part});
+      }
+
+
+      function generateTicket() {
+          const table = document.createElement("table");
+          const numbers = shuffleArray([...Array(90).keys()].map(x => ++x)); // Numbers 1-90 shuffled
+          let numIndex = 0;
+
+          for (let i = 0; i < 3; i++) {
+              const row = table.insertRow();
+              const randNum = shuffleArray([...Array(9).keys()].map(x => ++x));
+              // console.log(randNum);
+              for (let j = 0; j < 9; j++) {
+                  const cell = row.insertCell();
+                  // if (j !== 4 && j !== 8 && numIndex < 15) { // 5 numbers per row
+                  //     cell.textContent = numbers[numIndex++];
+                  // }
+                  if (randNum[j] < 6) {
+                      cell.textContent = numbers[numIndex++];
+                  }
+              }
+          }
+          return table;
+      }
+
+      // Fisher-Yates Shuffle algorithm
+      function shuffleArray(array) {
+          for (let i = array.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [array[i], array[j]] = [array[j], array[i]];
+          }
+          return array;
+      }
+    </script>
+  </body>
+</html>
